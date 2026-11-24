@@ -1,9 +1,9 @@
 # Intuition
 
-This Mermaid flowchart places the model-specific observations outside and beneath their corresponding output boxes, styled in red.
+This Mermaid flowchart places the model-specific observations outside and beneath their corresponding output boxes, styled in red. A white background is explicitly set for the diagram and its nodes.
 
 ```mermaid
-%%{init: {"theme":"base","flowchart":{"htmlLabels":true,"curve":"linear","nodeSpacing":70,"rankSpacing":70},"themeVariables":{"fontSize":"16px","primaryTextColor":"#172033","lineColor":"#596579"}}}%%
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryColor":"#ffffff","primaryTextColor":"#172033","lineColor":"#596579","fontSize":"16px"},"flowchart":{"htmlLabels":true,"curve":"linear","nodeSpacing":70,"rankSpacing":70}}}%%
 flowchart TB
     SOURCE["<div style='width:760px;text-align:center'><b>English Source</b><br/><br/>What is the role of carbohydrates in the diet of dairy cattle?</div>"]
 
@@ -34,19 +34,19 @@ flowchart TB
     SOURCE --> MBART
     SOURCE --> HUMAN
 
-    classDef source fill:#e8f1ff,stroke:#4a78b5,color:#172033,stroke-width:2px;
-    classDef model fill:#fff3e6,stroke:#d98a42,color:#172033,stroke-width:2px;
-    classDef reference fill:#eaf7ed,stroke:#4d9b61,color:#172033,stroke-width:2px;
-    classDef observation fill:transparent,stroke:transparent,color:#c62828,stroke-width:0px;
+    classDef source fill:#ffffff,stroke:#4a78b5,color:#172033,stroke-width:2px;
+    classDef model fill:#ffffff,stroke:#d98a42,color:#172033,stroke-width:2px;
+    classDef reference fill:#ffffff,stroke:#4d9b61,color:#172033,stroke-width:2px;
+    classDef observation fill:#ffffff,stroke:transparent,color:#c62828,stroke-width:0px;
 
     class SOURCE source;
     class NLLB,MBART model;
     class HUMAN reference;
     class NLLB_NOTE,MBART_NOTE observation;
-    style COMPARISON fill:transparent,stroke:#8a94a6,color:#172033,stroke-dasharray:5 5
-    style NLLB_COL fill:transparent,stroke:transparent
-    style MBART_COL fill:transparent,stroke:transparent
-    style HUMAN_COL fill:transparent,stroke:transparent
+    style COMPARISON fill:#ffffff,stroke:#8a94a6,color:#172033,stroke-dasharray:5 5
+    style NLLB_COL fill:#ffffff,stroke:transparent
+    style MBART_COL fill:#ffffff,stroke:transparent
+    style HUMAN_COL fill:#ffffff,stroke:transparent
     linkStyle default stroke:#596579,stroke-width:2px
     linkStyle 0,1 stroke:transparent,stroke-width:0px
 ```
