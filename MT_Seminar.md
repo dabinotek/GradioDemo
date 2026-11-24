@@ -14,16 +14,16 @@ flowchart TB
     direction LR
     subgraph FOUNDATION[Foundation Models]
       direction LR
-      LLAMA[LLaMA]
-      MISTRAL[Mistral]
-      GEMMA[Gemma]
-      PHI[Phi]
+      mBART[mBart]
+      MT5[mT5]
+      M200[M200]
+      NLLB200[NLLB200]
     end
 
     subgraph FINETUNE[Fine-Tuning Strategies]
       direction LR
       ZERO[Zero-Shot Baseline]
-      INST[Instruction Tuning]
+      FEW[Few-Shot Learning]
       SFT[Supervised Fine-Tuning]
       DOMAIN[Domain Adaptation]
     end
