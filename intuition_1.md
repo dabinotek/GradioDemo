@@ -3,14 +3,15 @@
 This Mermaid flowchart shows the English source above the three side-by-side translation outputs and human reference. The model observations appear beneath their respective outputs.
 
 ```mermaid
+%%{init: {"theme":"base","flowchart":{"htmlLabels":true,"curve":"linear","nodeSpacing":70,"rankSpacing":70},"themeVariables":{"fontSize":"16px","primaryTextColor":"#172033","lineColor":"#596579"}}}%%
 flowchart TB
-    SOURCE["English Source<br/><br/>What is the role of carbohydrates in the diet of dairy cattle?"]
+    SOURCE["<div style='width:760px;text-align:center'><b>English Source</b><br/><br/>What is the role of carbohydrates in the diet of dairy cattle?</div>"]
 
     subgraph COMPARISON["Translation Outputs and Human Reference"]
         direction LR
-        NLLB["NLLB-200 Output<br/><br/>Quel est le rôle des glucides dans l'alimentation du bétail laitier ?<br/><br/>🔴 Wrong language generated"]
-        MBART["mBART Output<br/><br/>main main main main<br/>main main main main main<br/><br/>🔴 Translation degeneration"]
-        HUMAN["Human Reference<br/><br/>Hihi bata wa irio cia hinya mīrīreinī ya ng'ombe ya iria."]
+        NLLB["<div style='width:320px;text-align:center'><b>NLLB-200 Output</b><br/><br/>Quel est le rôle des glucides dans l'alimentation du bétail laitier ?<br/><br/><span style='color:#b91c1c'><b>Wrong language generated</b></span></div>"]
+        MBART["<div style='width:320px;text-align:center'><b>mBART Output</b><br/><br/>main main main main<br/>main main main main main<br/><br/><span style='color:#b91c1c'><b>Translation degeneration</b></span></div>"]
+        HUMAN["<div style='width:320px;text-align:center'><b>Human Reference</b><br/><br/>Hihi bata wa irio cia hinya mīrīreinī ya ng'ombe ya iria.</div>"]
     end
 
     SOURCE --> NLLB
