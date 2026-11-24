@@ -51,64 +51,33 @@ flowchart TB
     linkStyle 0,1 stroke:transparent,stroke-width:0px
 ```
 
-## Model Architecture and Zero-Shot Context
+## Model Architecture (Conceptual)
 
-The infographic below uses a three-panel layout inspired by the shared reference: (a) the translation challenge, (b) a side-by-side view of the model families and their training differences, and (c) a practical diagnostic path for interpreting zero-shot output. It is conceptual rather than a layer-by-layer specification. Both families use multilingual Transformer encoder-decoder systems; the core architecture is similar, while pretraining, fine-tuning, language coverage, and checkpoint configuration differ.
+Both models use multilingual sequence-to-sequence Transformer encoder-decoder architectures. This simplified diagram highlights their different multilingual training setups; it is not a layer-by-layer specification.
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryColor":"#ffffff","primaryTextColor":"#172033","lineColor":"#596579","fontSize":"14px"},"flowchart":{"htmlLabels":true,"curve":"linear","nodeSpacing":24,"rankSpacing":36}}}%%
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","mainBkg":"#ffffff","primaryColor":"#ffffff","primaryTextColor":"#172033","lineColor":"#596579","fontSize":"15px"},"flowchart":{"htmlLabels":true,"curve":"linear","nodeSpacing":45,"rankSpacing":55}}}%%
 flowchart LR
-    subgraph A["(a) Challenge: translate into a language without reliable pair-level evidence"]
-        direction TB
-        A_SRC["English source<br/>Carbohydrates in dairy cattle diet?"] --> A_LANG["Requested target<br/>Confirm the exact language and script"]
-        A_LANG --> A_GAP["Coverage gap?<br/>Language, direction, or parallel data may be sparse"]
-        A_GAP --> A_OUT["Observed output<br/>Wrong language or repetition"]
+    subgraph MBART_ARCH["mBART / mBART-50"]
+        direction LR
+        M_INPUT["Multilingual text<br/>with language IDs"] --> M_ENC["Transformer<br/>Encoder"] --> M_LATENT["Shared contextual<br/>representation"] --> M_DEC["Transformer<br/>Decoder"] --> M_OUTPUT["Target-language<br/>text"]
+        M_PRETRAIN["Denoising pretraining:<br/>reconstruct corrupted text"] -. "pretrains" .-> M_ENC
+        M_PRETRAIN -. "pretrains" .-> M_DEC
     end
 
-    subgraph B["(b) Model families: shared Transformer backbone, different training recipes"]
-        direction TB
-        subgraph M["mBART / mBART-50"]
-            direction LR
-            M_IN["Multilingual text<br/>+ language IDs"] --> M_ENC["Shared Transformer<br/>Encoder"] --> M_REP["Contextual<br/>representation"] --> M_DEC["Shared Transformer<br/>Decoder"] --> M_OUT["Target text"]
-            M_PRE["Denoising pretraining<br/>reconstruct corrupted text"] -. "pretrains" .-> M_ENC
-            M_PRE -. "pretrains" .-> M_DEC
-            M_COV["mBART-50: 50 languages<br/>Checkpoint-specific translation fine-tuning"]
-        end
-        subgraph N["NLLB-200"]
-            direction LR
-            N_IN["Multilingual text<br/>+ source/target tags"] --> N_ENC["Shared Transformer<br/>Encoder"] --> N_REP["Contextual<br/>representation"] --> N_DEC["Shared Transformer<br/>Decoder"] --> N_OUT["Target text"]
-            N_TRAIN["Multilingual bitext<br/>+ translation objective"] -. "trains" .-> N_ENC
-            N_TRAIN -. "trains" .-> N_DEC
-            N_COV["200-language family<br/>Multiple checkpoint sizes"]
-        end
+    subgraph NLLB_ARCH["NLLB-200"]
+        direction LR
+        N_INPUT["Multilingual text<br/>with source/target language tags"] --> N_ENC["Transformer<br/>Encoder"] --> N_LATENT["Shared contextual<br/>representation"] --> N_DEC["Transformer<br/>Decoder"] --> N_OUTPUT["Target-language<br/>text"]
+        N_TRAIN["Multilingual bitext training<br/>and translation objective"] -. "trains" .-> N_ENC
+        N_TRAIN -. "trains" .-> N_DEC
     end
 
-    subgraph C["(c) Interpretation: verify coverage before diagnosing model failure"]
-        direction TB
-        C_CHECK["1. Check checkpoint support<br/>Is the target language included?"] --> C_CODES["2. Check language codes and script<br/>Are source and target tags correct?"]
-        C_CODES --> C_PAIR["3. Check direction and training evidence<br/>Was this pair seen or is transfer required?"]
-        C_PAIR --> C_DECODE["4. Inspect decoding and output<br/>Wrong language, repetition, or poor quality?"]
-        C_DECODE --> C_RESULT["Conclusion<br/>Language count alone does not guarantee quality"]
-    end
-
-    A_OUT -. "compare with both model families" .-> B
-    B -. "use these checks" .-> C
-
-    classDef task fill:#ffffff,stroke:#73849b,color:#172033,stroke-width:1.5px;
-    classDef shared fill:#eaf1fb,stroke:#4a78b5,color:#172033,stroke-width:1.5px;
-    classDef train fill:#fff3e6,stroke:#d98a42,color:#172033,stroke-width:1.5px;
-    classDef check fill:#edf6ed,stroke:#4d9b61,color:#172033,stroke-width:1.5px;
-    classDef issue fill:#fff0f0,stroke:#c62828,color:#8f1d1d,stroke-width:1.5px;
-    class A_SRC,A_LANG,A_GAP task;
-    class A_OUT issue;
-    class M_IN,M_ENC,M_REP,M_DEC,M_OUT,N_IN,N_ENC,N_REP,N_DEC,N_OUT shared;
-    class M_PRE,M_COV,N_TRAIN,N_COV train;
-    class C_CHECK,C_CODES,C_PAIR,C_DECODE,C_RESULT check;
-    style A fill:#ffffff,stroke:#6f7785,stroke-width:2px,stroke-dasharray:6 4
-    style B fill:#ffffff,stroke:#6f7785,stroke-width:2px,stroke-dasharray:6 4
-    style C fill:#ffffff,stroke:#6f7785,stroke-width:2px,stroke-dasharray:6 4
-    style M fill:#ffffff,stroke:#d98a42,stroke-width:1.5px
-    style N fill:#ffffff,stroke:#4a78b5,stroke-width:1.5px
+    classDef block fill:#ffffff,stroke:#607d9b,color:#172033,stroke-width:1.5px;
+    classDef training fill:#ffffff,stroke:#8a94a6,color:#172033,stroke-dasharray:4 3;
+    class M_INPUT,M_ENC,M_LATENT,M_DEC,M_OUTPUT,N_INPUT,N_ENC,N_LATENT,N_DEC,N_OUTPUT block;
+    class M_PRETRAIN,N_TRAIN training;
+    style MBART_ARCH fill:#ffffff,stroke:#d98a42,color:#172033,stroke-width:2px
+    style NLLB_ARCH fill:#ffffff,stroke:#4a78b5,color:#172033,stroke-width:2px
 ```
 
 ## Model Comparison
