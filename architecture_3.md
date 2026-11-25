@@ -1,12 +1,8 @@
 # Compartmentalized Transformer Architectures for Multilingual Translation
 
-This document redraws mBART-50 and NLLB-200 as compartmentalized, vertically flowing architectures. Each model is divided into three clear stages for both encoder and decoder:
+This document presents mBART-50 and NLLB-200 as compartmentalized, vertically flowing architectures, with practical inference pipelines and Python examples. Each model separates input preparation, the encoder stack and memory, the decoder stack, and autoregressive output.
 
-1. **Input preparation** — sentence, language ID, tokenization, and embeddings.
-2. **Transformer stack** — attention, residual + normalization, feed-forward network, and repeated layers.
-3. **Memory / generation** — encoder memory is explicitly connected to decoder cross-attention; decoder output is projected to vocabulary probabilities and generated autoregressively.
-
-The restrained navy, slate, and amber palette, grouped containers, consistent arrows, and distinct operation symbols are designed for an academic-paper figure. The checkpoint dimensions and depths below are model-specific.
+The restrained navy, slate, and amber palette, grouped containers, consistent arrows, and distinct operation symbols are designed for an academic-paper figure. Checkpoint dimensions and depths are specific to the named models.
 
 ## Visual key
 
@@ -92,6 +88,45 @@ flowchart TB
     style M_OUTPUT fill:#ffffff,stroke:#73849b,stroke-width:1.5px
 ```
 
+### mBART-50 inference pipeline
+
+1. Load the translation checkpoint and tokenizer.
+2. Set the source language ID (`en_XX`) before tokenization.
+3. Tokenize the English sentence to produce input token IDs and attention mask.
+4. Generate the target sequence, forcing a **supported** target-language ID.
+5. Decode generated token IDs to text.
+
+**Important:** Kikuyu is unsupported by mBART-50. The runnable example uses French (`fr_XX`) as a supported target instead; do not treat this checkpoint as an English-to-Kikuyu model.
+
+```python
+import torch
+from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
+
+checkpoint = "facebook/mbart-large-50-many-to-many-mmt"
+source_text = "What is the role of carbohydrates in the diet of dairy cattle?"
+
+# Load the checkpoint and its matching tokenizer.
+tokenizer = MBart50TokenizerFast.from_pretrained(checkpoint)
+model = MBartForConditionalGeneration.from_pretrained(checkpoint)
+
+# mBART-50 language codes are special tokens. Kikuyu is not supported;
+# use a supported target such as French for this demonstration.
+tokenizer.src_lang = "en_XX"
+target_lang = "fr_XX"
+inputs = tokenizer(source_text, return_tensors="pt")
+
+with torch.inference_mode():
+    generated = model.generate(
+        **inputs,
+        forced_bos_token_id=tokenizer.lang_code_to_id[target_lang],
+        max_new_tokens=128,
+        num_beams=4,
+    )
+
+translation = tokenizer.batch_decode(generated, skip_special_tokens=True)[0]
+print(translation)
+```
+
 ## NLLB-200 3.3B
 
 NLLB-200 3.3B has 24 encoder and 24 decoder layers, `d_model=1024`, 16 attention heads, FFN dimension 8192, and ReLU activation. The direction is explicitly tagged: English `eng_Latn` → Kikuyu `kik_Latn`. Kikuyu is included in NLLB-200's language set, although coverage alone does not guarantee quality for every direction.
@@ -168,6 +203,65 @@ flowchart TB
     style N_OUTPUT fill:#ffffff,stroke:#73849b,stroke-width:1.5px
 ```
 
+### NLLB-200 3.3B inference pipeline
+
+1. Load the NLLB checkpoint and tokenizer.
+2. Set the source language code (`eng_Latn`) before tokenization.
+3. Tokenize the source sentence and create model input tensors.
+4. Resolve the target language token (`kik_Latn`) and force it as the first generated token.
+5. Generate and decode the target sequence.
+
+The 3.3B checkpoint is large and may require a GPU or substantial system memory. The example uses automatic device placement when supported by the installed Transformers/Accelerate versions; use `device_map="cpu"` or move the model and inputs explicitly if needed.
+
+```python
+import torch
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+checkpoint = "facebook/nllb-200-3.3B"
+source_text = "What is the role of carbohydrates in the diet of dairy cattle?"
+source_lang = "eng_Latn"
+target_lang = "kik_Latn"
+
+# Load tokenizer and model. The 3.3B weights need substantial memory.
+tokenizer = AutoTokenizer.from_pretrained(checkpoint, src_lang=source_lang)
+model = AutoModelForSeq2SeqLM.from_pretrained(
+    checkpoint,
+    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+    device_map="auto" if torch.cuda.is_available() else None,
+)
+
+# Ensure this tokenizer's vocabulary contains the requested target language tag.
+target_token_id = tokenizer.convert_tokens_to_ids(target_lang)
+if target_token_id == tokenizer.unk_token_id:
+    raise ValueError(f"Target language code {target_lang!r} is not in this tokenizer")
+
+inputs = tokenizer(source_text, return_tensors="pt")
+if not torch.cuda.is_available():
+    inputs = {name: tensor.to(model.device) for name, tensor in inputs.items()}
+
+with torch.inference_mode():
+    generated = model.generate(
+        **inputs,
+        forced_bos_token_id=target_token_id,
+        max_new_tokens=128,
+        num_beams=4,
+    )
+
+translation = tokenizer.batch_decode(generated, skip_special_tokens=True)[0]
+print(translation)
+```
+
+## Shared inference pipeline
+
+| Stage | What happens | Model-specific detail |
+|---|---|---|
+| 1. Load | Load the matching tokenizer and sequence-to-sequence checkpoint. | mBART-50 and NLLB use different language-code conventions. |
+| 2. Inject direction | Set the source language ID and select a supported target ID. | mBART-50: `en_XX` / `fr_XX` in the runnable sample. NLLB: `eng_Latn` / `kik_Latn`. |
+| 3. Tokenize | Convert source text to token IDs and attention mask. | Use the tokenizer paired with the exact checkpoint. |
+| 4. Encode and decode | The encoder creates source states; the decoder cross-attends to them while generating tokens autoregressively. | Implemented by `model.generate(...)`. |
+| 5. Constrain output language | Force the target language token at the start of generation. | Use the checkpoint tokenizer's language-token ID. |
+| 6. Decode | Convert generated token IDs back to readable text. | `batch_decode(..., skip_special_tokens=True)`. |
+
 ## Checkpoint summary
 
 | Checkpoint | Languages | Parameters (approx.) | Encoder / decoder layers | `d_model` / heads / FFN dimension | FFN activation |
@@ -175,7 +269,7 @@ flowchart TB
 | [mBART-50 many-to-many](https://huggingface.co/facebook/mbart-large-50-many-to-many-mmt) | 50 | 610M | 12 / 12 | 1024 / 16 / 4096 | GELU |
 | [NLLB-200 3.3B](https://huggingface.co/facebook/nllb-200-3.3B) | 200 | 3.3B | 24 / 24 | 1024 / 16 / 8192 | ReLU |
 
-NLLB-200 also has smaller checkpoint variants, including distilled 600M and 1.3B models; those have different configurations. The table refers only to the named checkpoints.
+NLLB-200 also has smaller checkpoint variants, including distilled 600M and 1.3B models; those have different configurations. The table refers to the named checkpoints.
 
 ## Reading the diagrams
 
